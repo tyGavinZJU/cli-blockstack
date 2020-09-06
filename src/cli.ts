@@ -2598,7 +2598,7 @@ function sendTokens(network: CLINetworkAdapter, args: string[]) : Promise<string
   const senderUTXOsPromise = network.getUTXOs(senderAddress);
 
   const txPromise = blockstack.transactions.makeTokenTransfer(
-    recipientAddress, tokenType, tokenAmount, memo, privateKey, privateKeyBTC, !hasKeys(privateKey));
+    recipientAddress, tokenType, tokenAmount, memo, privateKey);
 
   const estimatePromise = senderUTXOsPromise.then((utxos) => {
     const numUTXOs = utxos.length;

@@ -391,17 +391,17 @@ export async function handleAuth(network: CLINetworkAdapter,
     identities = await getIdentityInfo(network, mnemonic, gaiaHubUrl, profileGaiaHub);
 
     errorMsg = 'Unable to verify authentication token';
-    const valid = await blockstack.verifyAuthRequest(authToken);
+    const valid = await blockstack.verifyAuthRequest(authToken as string);
         
     if (!valid) {
       errorMsg = 'Invalid authentication token: could not verify';
       throw new Error(errorMsg);
     }
     errorMsg = 'Unable to fetch app manifest';
-    const appManifest = await blockstack.fetchAppManifest(authToken);
+    const appManifest = await blockstack.fetchAppManifest(authToken as string);
 
     errorMsg = 'Unable to decode token';
-    const decodedAuthToken = jsontokens.decodeToken(authToken);
+    const decodedAuthToken = jsontokens.decodeToken(authToken as string);
     const decodedAuthPayload = decodedAuthToken.payload;
     if (!decodedAuthPayload) {
       errorMsg = 'Invalid authentication token: no payload';
@@ -612,13 +612,13 @@ export async function handleSignIn(network: CLINetworkAdapter,
   let profileAPIUpdate : boolean;
 
   try {
-    const valid = await blockstack.verifyAuthResponse(authResponseQP, nameLookupUrl);
+    const valid = await blockstack.verifyAuthResponse(authResponseQP as string, nameLookupUrl);
     if (!valid) {
       errorMsg = `Unable to verify authResponse token ${authResponseQP}`;
       throw new Error(errorMsg);
     }
 
-    const authResponseToken = jsontokens.decodeToken(authResponseQP);
+    const authResponseToken = jsontokens.decodeToken(authResponseQP as string);
     authResponsePayload = authResponseToken.payload;
 
     id = authResponsePayload.metadata.id;

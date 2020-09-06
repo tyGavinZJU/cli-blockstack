@@ -26,7 +26,7 @@ import {
 import {
   getOwnerKeyInfo,
   getPaymentKeyInfo,
-  getPaymentKeyInfo24,
+  getStacksWalletKeyInfo,
   getApplicationKeyInfo,
   extractAppKey,
   STRENGTH,
@@ -389,7 +389,7 @@ function txPreorder(network: CLINetworkAdapter, args: string[], preorderTxOnly: 
 
   if (estimateOnly) {
     return estimatePromise
-      .then((cost: number) => String(cost));
+      .then((cost: number) => JSONStringify({cost: cost}));
   }
   
   if (!safetyChecks) {
@@ -549,7 +549,7 @@ function txRegister(network: CLINetworkAdapter, args: string[], registerTxOnly: 
 
   if (estimateOnly) {
     return estimatePromise
-      .then((cost: number) => String(cost));
+      .then((cost: number) => JSONStringify({cost: cost}));
   }
  
   if (!safetyChecks) {
@@ -1807,6 +1807,18 @@ function register(network: CLINetworkAdapter, args: string[]) : Promise<string> 
   })
     .then(([preorderSafetyChecks, registerSafetyChecks]) => {
       if (!checkTxStatus(preorderSafetyChecks) || !checkTxStatus(registerSafetyChecks)) {
+        try {
+           preorderSafetyChecks = JSON.parse(preorderSafetyChecks);
+        }
+        catch (e) {
+        }
+
+        try {
+           registerSafetyChecks = JSON.parse(registerSafetyChecks);
+        }
+        catch (e) {
+        }
+
       // one or both safety checks failed 
         throw new SafetyError({
           'status': false,
@@ -2334,14 +2346,14 @@ async function getPaymentKey(network: CLINetworkAdapter, args: string[]) : Promi
 }
 
 /*
- * Get the payment private key from a backup phrase
+ * Get the payment private key from a backup phrase used by the Stacks wallet
  * args:
  * @mnemonic (string) the 24-word phrase
  */
-async function getPaymentKey24(network: CLINetworkAdapter, args: string[]) : Promise<string> {
+async function getStacksWalletKey(network: CLINetworkAdapter, args: string[]) : Promise<string> {
   const mnemonic = await getBackupPhrase(args[0]);
   // keep the return value consistent with getOwnerKeys
-  const keyObj = await getPaymentKeyInfo24(network, mnemonic);
+  const keyObj = await getStacksWalletKeyInfo(network, mnemonic);
   const keyInfo: PaymentKeyInfoType[] = [];
   keyInfo.push(keyObj);
   return JSONStringify(keyInfo);
@@ -2804,6 +2816,36 @@ function gaiaPutFile(network: CLINetworkAdapter, args: string[]) : Promise<strin
     });
 }
 
+/*
+ * Delete a file in a Gaia hub
+ * args:
+ * @hubUrl (string) the URL to the write endpoint of the gaia hub
+ * @appPrivateKey (string) the private key used to authenticate to the gaia hub
+ * @gaiaPath (string) the path (in Gaia) to delete
+ * @wasSigned (string) OPTIONAL: if '1' or 'true'.  Delete the signature file as well.
+ */
+function gaiaDeleteFile(network: CLINetworkAdapter, args: string[]): Promise<string> {
+  const hubUrl = args[0];
+  const appPrivateKey = args[1];
+  const gaiaPath = path.normalize(args[2].replace(/^\/+/, ''));
+
+  let wasSigned = false;
+
+  if (args.length > 3 && !!args[3]) {
+    wasSigned = (args[3].toLowerCase() === 'true' || args[3].toLowerCase() === '1');
+  }
+
+  // force mainnet addresses
+  // TODO
+  blockstack.config.network.layer1 = bitcoin.networks.bitcoin;
+  return gaiaAuth(network, appPrivateKey, hubUrl)
+    .then((_userData: UserData) => {
+      return blockstack.deleteFile(gaiaPath, {wasSigned: wasSigned});
+    })
+    .then(() => {
+      return JSONStringify('ok');
+    });
+}
 
 /*
  * List files in a Gaia hub
@@ -3379,11 +3421,12 @@ const COMMANDS : Record<string, CommandFunction> = {
   'decrypt_keychain': decryptMnemonic,
   'docs': printDocs,
   'encrypt_keychain': encryptMnemonic,
+  'gaia_deletefile': gaiaDeleteFile,
   'gaia_dump_bucket': gaiaDumpBucket,
   'gaia_getfile': gaiaGetFile,
-  'gaia_restore_bucket': gaiaRestoreBucket,
-  'gaia_putfile': gaiaPutFile,
   'gaia_listfiles': gaiaListFiles,
+  'gaia_putfile': gaiaPutFile,
+  'gaia_restore_bucket': gaiaRestoreBucket,
   'gaia_sethub': gaiaSetHub,
   'get_address': getKeyAddress,
   'get_account_at': getAccountAt,
@@ -3396,7 +3439,7 @@ const COMMANDS : Record<string, CommandFunction> = {
   'get_app_keys': getAppKeys,
   'get_owner_keys': getOwnerKeys,
   'get_payment_key': getPaymentKey,
-  'get_payment_key_24': getPaymentKey24,
+  'get_stacks_wallet_key': getStacksWalletKey,
   'get_zonefile': getZonefile,
   'lookup': lookup,
   'make_keychain': makeKeychain,
@@ -3436,7 +3479,7 @@ export function CLIMain() {
   const cmdArgs : any = checkArgs(CLIOptAsStringArray(opts, '_') ? CLIOptAsStringArray(opts, '_') : []);
   if (!cmdArgs.success) {
     if (cmdArgs.error) {
-       console.log(cmdArgs.error);
+      console.log(cmdArgs.error);
     }
     if (cmdArgs.usage) {
       if (cmdArgs.command) {

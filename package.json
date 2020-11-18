@@ -1,5 +1,5 @@
 {
-  "name": "blockstack-cli",
+  "name": "blockstack-cli-Gavin",
   "version": "1.0.0",
   "description": "Node.js Blockstack CLI",
   "main": "lib/index.js",
@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "bin": {
-    "blockstack-cli": "./cmd/index.js"
+    "blockstack-cli-Gavin": "./cmd/index.js"
   },
   "bugs": {
     "url": "https://github.com/blockstack/cli-blockstack/issues"
